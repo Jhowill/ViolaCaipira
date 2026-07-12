@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Viola Caipira",
+    "slug": "viola-caipira",
+    "scheme": "viola-caipira",
+    "experiments": {
+      "tsconfigPaths": true
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
