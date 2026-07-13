@@ -1,50 +1,33 @@
 import type { PropsWithChildren } from "react";
 
-import { ErrorState, LoadingState, ScreenContainer } from "@/components/ui";
-import { useAppBootstrap } from "@/hooks/useAppBootstrap";
+import { Redirect, usePathname } from "expo-router";
 
-const phaseMessages = {
-  booting: "Preparando o aplicativo",
-  checking_database: "Verificando os dados locais",
-  migrating_database: "Atualizando o banco local",
-  restoring_preferences: "Restaurando suas preferências",
-} as const;
+import { APP_ROUTE_GROUPS } from "@/constants/routes";
+import { useAppBootstrap } from "@/hooks/useAppBootstrap";
+import { BootstrapScreen } from "@/screens/system/BootstrapScreen";
+
+const recoveryRoute = "/error/recovery";
 
 export function AppBootstrapGate({ children }: PropsWithChildren) {
   const bootstrap = useAppBootstrap();
+  const pathname = usePathname();
+  const isRecoveryRoute = pathname === recoveryRoute;
 
   if (bootstrap.phase === "ready") {
+    if (isRecoveryRoute) {
+      return <Redirect href={APP_ROUTE_GROUPS.tabs} />;
+    }
+
     return children;
   }
 
   if (bootstrap.phase === "recoverable_error" || bootstrap.phase === "fatal_error") {
-    const fatal = bootstrap.phase === "fatal_error";
+    if (!isRecoveryRoute) {
+      return <Redirect href={recoveryRoute} />;
+    }
 
-    return (
-      <ScreenContainer padded background="default">
-        <ErrorState
-          title={fatal ? "Não foi possível preparar o aplicativo" : "Tivemos um problema ao iniciar"}
-          description={
-            fatal
-              ? "Seus dados foram preservados. Feche o aplicativo e tente novamente."
-              : "Seus dados continuam seguros no aparelho. Tente iniciar novamente."
-          }
-          actionLabel="Tentar novamente"
-          onActionPress={fatal ? undefined : () => void bootstrap.retry()}
-          accessibilityLabel="Erro ao preparar o aplicativo"
-        />
-      </ScreenContainer>
-    );
+    return children;
   }
 
-  return (
-    <ScreenContainer padded background="default">
-      <LoadingState
-        title={phaseMessages[bootstrap.phase]}
-        description="Tudo funciona localmente e sem depender de internet."
-        accessibilityLabel={phaseMessages[bootstrap.phase]}
-        rows={3}
-      />
-    </ScreenContainer>
-  );
+  return <BootstrapScreen phase={bootstrap.phase} />;
 }

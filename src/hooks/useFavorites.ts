@@ -28,7 +28,10 @@ async function getDefaultFavoritesRepository(): Promise<FavoritesRepository> {
     defaultFavoritesRepositoryPromise = (async () => {
       const client = await getAppDatabaseClient();
       return createFavoritesRepository(client.database);
-    })();
+    })().catch((error: unknown) => {
+      defaultFavoritesRepositoryPromise = null;
+      throw error;
+    });
   }
 
   return defaultFavoritesRepositoryPromise;

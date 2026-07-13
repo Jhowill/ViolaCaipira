@@ -9,9 +9,9 @@ const notes = ["C", "D", "E", "F", "G", "A", "B", "C♯", "D♯", "F♯", "G♯"
 const qualities = ["Maior", "Menor", "7", "maj7", "sus4", "add9"] as const;
 
 const shapes = [
-  { id: "d-maior", name: "D", quality: "Maior", description: "Forma aberta clara e prática", status: "verified" },
-  { id: "bm", name: "Bm", quality: "Menor", description: "Pestana curta com leitura fácil", status: "calculated" },
-  { id: "a7", name: "A7", quality: "7", description: "Sólido para progressões de viola", status: "verified" },
+  { id: "d-maior", symbol: "D", quality: "Maior", description: "Forma aberta clara e prática", status: "verified" },
+  { id: "bm", symbol: "Bm", quality: "Menor", description: "Pestana curta com leitura fácil", status: "calculated" },
+  { id: "a7", symbol: "A7", quality: "7", description: "Sólido para progressões de viola", status: "verified" },
 ] as const;
 
 export default function ChordsTabScreen() {
@@ -20,7 +20,7 @@ export default function ChordsTabScreen() {
   const [query, setQuery] = useState("");
 
   const filteredShapes = shapes.filter((shape) =>
-    `${shape.name} ${shape.quality} ${shape.description}`.toLowerCase().includes(query.toLowerCase()),
+    `${shape.symbol} ${shape.quality} ${shape.description}`.toLowerCase().includes(query.toLowerCase()),
   );
 
   return (
@@ -73,7 +73,7 @@ export default function ChordsTabScreen() {
             key={shape.id}
             variant="chord"
             padding="lg"
-            title={`${shape.name}${shape.quality === "Maior" ? "" : shape.quality === "Menor" ? "m" : shape.quality}`}
+            title={shape.symbol}
             subtitle={`${shape.quality} • ${shape.status}`}
             description={shape.description}
             icon={<Text style={[theme.typography.titleSmall, { color: theme.colors.primary }]}>♩</Text>}

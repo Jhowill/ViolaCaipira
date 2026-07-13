@@ -27,7 +27,10 @@ async function getDefaultRecentRepository(): Promise<RecentRepository> {
     defaultRecentRepositoryPromise = (async () => {
       const client = await getAppDatabaseClient();
       return createRecentRepository(client.database);
-    })();
+    })().catch((error: unknown) => {
+      defaultRecentRepositoryPromise = null;
+      throw error;
+    });
   }
 
   return defaultRecentRepositoryPromise;

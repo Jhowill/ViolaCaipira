@@ -26,7 +26,10 @@ async function getDefaultResumeRepository(): Promise<ResumeRepository> {
     defaultResumeRepositoryPromise = (async () => {
       const client = await getAppDatabaseClient();
       return createResumeRepository(client.database);
-    })();
+    })().catch((error: unknown) => {
+      defaultResumeRepositoryPromise = null;
+      throw error;
+    });
   }
 
   return defaultResumeRepositoryPromise;

@@ -64,7 +64,11 @@ export function AppBootstrapProvider({ children, steps }: AppBootstrapProviderPr
     }
 
     runningRef.current = true;
-    setState((current) => ({ phase: "booting", attempt: current.attempt + 1, error: null }));
+    setState((current) => ({
+      phase: "booting",
+      attempt: current.attempt + 1,
+      error: null,
+    }));
 
     try {
       await runAppBootstrap(steps ?? defaultSteps, (phase: AppBootstrapPhase) => {

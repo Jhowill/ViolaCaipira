@@ -224,7 +224,7 @@ export function AppButton({
             {content}
           </View>
           {loading ? (
-            <View style={styles.loadingOverlay} pointerEvents="none">
+            <View style={styles.loadingOverlay}>
               <ActivityIndicator color={spinnerColor} size="small" />
             </View>
           ) : null}
@@ -276,6 +276,7 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFill,
+    pointerEvents: "none",
     alignItems: "center",
     justifyContent: "center",
   },

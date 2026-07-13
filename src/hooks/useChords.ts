@@ -40,7 +40,10 @@ async function getDefaultChordRepository(): Promise<ChordRepository> {
       const preferences = createPreferencesRepository(client.database);
       const tunings = createTuningRepository(client.database, { preferencesRepository: preferences });
       return createChordRepository(client.database, { tuningRepository: tunings });
-    })();
+    })().catch((error: unknown) => {
+      defaultChordRepositoryPromise = null;
+      throw error;
+    });
   }
 
   return defaultChordRepositoryPromise;

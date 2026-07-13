@@ -46,7 +46,10 @@ async function getDefaultRepositoryBundle(): Promise<RepositoryBundle> {
         rhythms,
         search,
       };
-    })();
+    })().catch((error: unknown) => {
+      defaultRepositoryBundlePromise = null;
+      throw error;
+    });
   }
 
   return defaultRepositoryBundlePromise;

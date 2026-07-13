@@ -27,7 +27,10 @@ async function getDefaultBackupService(): Promise<BackupService> {
       return createBackupService(client.database, {
         appVersion: "0.1.0",
       });
-    })();
+    })().catch((error: unknown) => {
+      defaultBackupServicePromise = null;
+      throw error;
+    });
   }
 
   return defaultBackupServicePromise;

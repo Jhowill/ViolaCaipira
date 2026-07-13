@@ -79,7 +79,6 @@ export function ToastProvider({ children, defaultDurationMs = 3000 }: ToastProvi
 
       {currentToast ? (
         <View
-          pointerEvents="box-none"
           style={[
             styles.viewport,
             {
@@ -115,6 +114,7 @@ export function ToastProvider({ children, defaultDurationMs = 3000 }: ToastProvi
 
 const styles = StyleSheet.create({
   viewport: {
+    pointerEvents: "box-none",
     position: "absolute",
     left: 0,
     right: 0,

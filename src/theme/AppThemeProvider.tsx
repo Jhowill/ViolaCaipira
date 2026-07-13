@@ -24,11 +24,15 @@ export function AppThemeProvider({
   useEffect(() => {
     let active = true;
 
-    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (active) {
-        setReduceMotion(enabled);
-      }
-    });
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (active) {
+          setReduceMotion(enabled);
+        }
+      })
+      .catch(() => {
+        // Mantém o valor padrão quando a API de acessibilidade não está disponível.
+      });
 
     const subscription = AccessibilityInfo.addEventListener(
       'reduceMotionChanged',
