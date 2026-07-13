@@ -1,53 +1,33 @@
+import { DetectedNote } from "@/components/tuner/DetectedNote";
+import { TunerGauge } from "@/components/tuner/TunerGauge";
+import { AppButton, AppCard, AppHeader, ErrorState, ScreenContainer } from "@/components/ui";
 import { APP_ROUTES } from "@/constants/routes";
-import { RoutePlaceholder } from "@/components/navigation/RoutePlaceholder";
-import { AppCard, Chip } from "@/components/ui";
 import { useSafeNavigation } from "@/hooks/useSafeNavigation";
+import { useTuner } from "@/hooks/useTuner";
+import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
 export default function ChromaticTunerScreen() {
   const navigation = useSafeNavigation();
+  const tuner = useTuner();
+  const analysis = tuner.state.analysis;
+
+  useEffect(() => {
+    void tuner.setMode("chromatic");
+  }, [tuner.setMode]);
+
+  useEffect(() => () => { void tuner.stop(); }, [tuner.stop]);
 
   return (
-    <RoutePlaceholder
-      eyebrow="Afinador cromático"
-      title="Qualquer nota"
-      subtitle="Leitura livre e precisa"
-      heroTitle="Leitura do sinal"
-      heroDescription="O shell reserva o espaço para frequência, oitava e cents sem acionar microfone automaticamente."
-      heroVariant="music"
-      activeTuningValue="Cebolão em Ré"
-      activeTuningDetail="Ainda visível mesmo fora do modo guiado"
-      primaryActionLabel="Voltar ao guiado"
-      onPrimaryActionPress={() => navigation.push(APP_ROUTES.tunerGuided)}
-      secondaryActionLabel="Ouvir referência"
-      onSecondaryActionPress={() => navigation.push(APP_ROUTES.tunerReference)}
-    >
-      <AppCard
-        variant="informative"
-        title="Frequência estimada"
-        subtitle="Exemplo visual"
-        description="440.0 Hz • A4 • +3 cents"
-      >
-        <View style={styles.chipRow}>
-          <Chip label="Estável" variant="status" selected />
-          <Chip label="Ruído baixo" variant="tag" />
-        </View>
-      </AppCard>
-
-      <AppCard
-        variant="alert"
-        title="Sem sinal suficiente"
-        description="Quando o som não for confiável, o app deve evitar uma leitura falsa."
-      />
-    </RoutePlaceholder>
+    <ScreenContainer scroll maxWidth={720}>
+      <AppHeader eyebrow="Afinador cromático" title="Qualquer nota" subtitle="Leitura livre e precisa" onBackPress={() => navigation.safeBack(APP_ROUTES.tuner)} />
+      <AppCard variant="informative" title="Leitura do sinal" subtitle={tuner.state.status === "listening" ? "Microfone ativo" : "Microfone parado"} description="O áudio é processado localmente e não é enviado para a rede." />
+      <TunerGauge cents={analysis?.centsFromNearestNote ?? 0} statusLabel={analysis ? (Math.abs(analysis.centsFromNearestNote) <= tuner.state.toleranceCents ? "Afinada" : "Ajuste") : "Aguardando"} detailLabel={analysis ? `${analysis.frequency.toFixed(1)} Hz` : "Sem leitura"} signalQuality={analysis?.signalQuality ?? tuner.state.signal.quality} />
+      <DetectedNote noteLabel={analysis?.noteLabel ?? "—"} frequencyLabel={analysis ? `${analysis.frequency.toFixed(1)} Hz` : undefined} instructionLabel={analysis ? (analysis.isWithinTolerance ? "A leitura está dentro da tolerância." : "Ajuste lentamente até aproximar do centro.") : "Toque uma corda para começar."} signalQuality={analysis?.signalQuality ?? tuner.state.signal.quality} />
+      {tuner.state.error ? <ErrorState title="Não foi possível iniciar o microfone" description="A captura permanece parada até você conceder a permissão." details={tuner.state.error.message} onActionPress={() => void tuner.clearError()} /> : null}
+      <View style={styles.actions}><AppButton fullWidth onPress={() => void (tuner.state.status === "listening" ? tuner.pause() : tuner.start())}>{tuner.state.status === "listening" ? "Pausar leitura" : "Iniciar leitura"}</AppButton><AppButton fullWidth variant="secondary" onPress={() => navigation.push(APP_ROUTES.tunerGuided)}>Ir para o guiado</AppButton></View>
+    </ScreenContainer>
   );
 }
 
-const styles = StyleSheet.create({
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-});
+const styles = StyleSheet.create({ actions: { gap: 10 } });

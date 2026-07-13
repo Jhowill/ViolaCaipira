@@ -1,62 +1,47 @@
+import { RhythmPattern } from "@/components/rhythms/RhythmPattern";
+import { AppButton, AppHeader, EmptyState, ErrorState, LoadingState, ScreenContainer } from "@/components/ui";
 import { APP_ROUTES } from "@/constants/routes";
-import { RoutePlaceholder } from "@/components/navigation/RoutePlaceholder";
-import { AppButton, AppCard, Chip } from "@/components/ui";
+import { useMetronome } from "@/hooks/useMetronome";
+import { useRhythm } from "@/hooks/useRhythm";
 import { useSafeNavigation } from "@/hooks/useSafeNavigation";
-import { humanizeSlug } from "@/utils/formatters";
+import type { ContentOrigin, EntityRef } from "@/types/music";
 import { useLocalSearchParams } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { useEffect, useMemo } from "react";
+
+function resolveOrigin(value: string | undefined): ContentOrigin {
+  return value === "user" ? "user" : "catalog";
+}
 
 export default function RhythmPracticeScreen() {
   const navigation = useSafeNavigation();
-  const params = useLocalSearchParams<{ rhythmId?: string }>();
-  const rhythmName = humanizeSlug(params.rhythmId, "Prática");
+  const params = useLocalSearchParams<{ rhythmId?: string; origin?: string }>();
+  const rhythmId = params.rhythmId ?? "missing";
+  const ref = useMemo<EntityRef<"rhythm">>(() => ({ type: "rhythm", origin: resolveOrigin(params.origin), id: rhythmId }), [params.origin, rhythmId]);
+  const rhythmState = useRhythm({ ref });
+  const metronome = useMetronome();
+  const rhythm = rhythmState.rhythm;
+  const pattern = rhythm?.patterns[0] ?? null;
 
+  useEffect(() => {
+    if (!rhythm) return;
+    void metronome.setBpm(rhythm.bpm);
+    void metronome.setTimeSignature(rhythm.timeSignatureNumerator, rhythm.timeSignatureDenominator);
+  }, [metronome.setBpm, metronome.setTimeSignature, rhythm]);
+
+  useEffect(() => () => { void metronome.handleExit(); }, [metronome.handleExit]);
+
+  if (rhythmState.status === "loading") return <ScreenContainer variant="centered"><LoadingState title="Carregando prática" /></ScreenContainer>;
+  if (rhythmState.status === "error") return <ScreenContainer variant="centered"><ErrorState title="Não foi possível abrir a prática" description="O ritmo local permanece intacto." details={rhythmState.error?.message} onActionPress={() => void rhythmState.refresh()} secondaryActionLabel="Voltar aos ritmos" onSecondaryActionPress={() => navigation.safeBack(APP_ROUTES.rhythms)} /></ScreenContainer>;
+  if (!rhythm) return <ScreenContainer variant="centered"><EmptyState title="Ritmo não encontrado" description="A prática depende de um ritmo instalado no banco local." actionLabel="Voltar aos ritmos" onActionPress={() => navigation.safeBack(APP_ROUTES.rhythms)} /></ScreenContainer>;
+  if (!pattern) return <ScreenContainer variant="centered"><EmptyState title="Prática sem padrão" description="O ritmo ainda não possui uma sequência validada para estudo." actionLabel="Voltar ao ritmo" onActionPress={() => navigation.safeBack(APP_ROUTES.rhythmDetail(rhythm.ref.id))} /></ScreenContainer>;
+
+  const currentStepIndex = metronome.state.beat.beatInBar === null ? null : (metronome.state.beat.beatInBar - 1) % pattern.steps.length;
   return (
-    <RoutePlaceholder
-      eyebrow="Prática de ritmo"
-      title={rhythmName}
-      subtitle="Sequência guiada para tocar junto com metrônomo"
-      heroTitle="Hora de praticar"
-      heroDescription="A tela de treino já separa o espaço para BPM, contagem e repetição do ciclo."
-      heroVariant="rhythm"
-      activeTuningValue="Cebolão em Ré"
-      activeTuningDetail="Mão direita em foco"
-      primaryActionLabel="Abrir metrônomo"
-      onPrimaryActionPress={() => navigation.push(APP_ROUTES.metronome)}
-      secondaryActionLabel="Voltar ao ritmo"
-      onSecondaryActionPress={() => navigation.safeBack(APP_ROUTES.rhythmDetail(params.rhythmId ?? "cururu"))}
-    >
-      <AppCard
-        variant="selected"
-        title="Ciclo atual"
-        subtitle="Passo 2 de 4"
-        description="Baixo • Cima • Abafa • Pausa"
-      >
-        <View style={styles.chipRow}>
-          <Chip label="72 BPM" variant="status" selected />
-          <Chip label="Repetir 3x" variant="tag" />
-        </View>
-      </AppCard>
-
-      <AppCard
-        variant="informative"
-        title="Controle do exercício"
-        description="Essa área pode segurar play, pause, reinício e marcação de progresso."
-        footer={
-          <AppButton fullWidth onPress={() => navigation.push(APP_ROUTES.rhythms)} variant="secondary">
-            Sair da prática
-          </AppButton>
-        }
-      />
-    </RoutePlaceholder>
+    <ScreenContainer scroll maxWidth={720}>
+      <AppHeader eyebrow="Prática de ritmo" title={rhythm.name} subtitle="Sequência guiada com metrônomo" onBackPress={() => navigation.safeBack(APP_ROUTES.rhythmDetail(rhythm.ref.id))} />
+      <RhythmPattern pattern={pattern} currentStepIndex={currentStepIndex} description={rhythm.description ?? undefined} />
+      <AppButton fullWidth onPress={() => void (metronome.state.status === "playing" || metronome.state.status === "counting_in" ? metronome.pause() : metronome.start())}>{metronome.state.status === "playing" || metronome.state.status === "counting_in" ? "Pausar prática" : `Iniciar em ${metronome.state.bpm} BPM`}</AppButton>
+      <AppButton fullWidth variant="secondary" onPress={() => navigation.push(APP_ROUTES.metronome)}>Abrir controles do metrônomo</AppButton>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-});

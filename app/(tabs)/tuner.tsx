@@ -1,6 +1,7 @@
 import { APP_ROUTES } from "@/constants/routes";
 import { useAppTheme } from "@/hooks/useAppTheme";
 import { useSafeNavigation } from "@/hooks/useSafeNavigation";
+import { useTunings } from "@/hooks/useTunings";
 import { AppButton, AppCard, Chip, ScreenContainer } from "@/components/ui";
 import { ActiveTuningPill } from "@/components/navigation/ActiveTuningPill";
 import { StyleSheet, Text, View } from "react-native";
@@ -29,6 +30,8 @@ const modes = [
 export default function TunerTabScreen() {
   const navigation = useSafeNavigation();
   const { theme } = useAppTheme();
+  const tuningsState = useTunings();
+  const activeTuning = tuningsState.tunings.find((tuning) => tuning.isActive);
 
   return (
     <ScreenContainer scroll background="default">
@@ -42,8 +45,8 @@ export default function TunerTabScreen() {
       />
 
       <ActiveTuningPill
-        value="Cebolão em Ré"
-        detail="Escolha a afinação antes de abrir o microfone"
+        value={activeTuning?.name ?? (tuningsState.status === "loading" ? "Carregando…" : "Não definida")}
+        detail={activeTuning ? "Afinação ativa salva localmente" : "Escolha a afinação antes de abrir o microfone"}
         onPress={() => navigation.replace(APP_ROUTES.tunings)}
       />
 
