@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Viola Caipira",
+    "name": "Cifras de Viola",
     "slug": "viola-caipira",
     "version": "0.1.0",
     "scheme": "viola-caipira",
@@ -33,7 +33,13 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "O Cifras de Viola usa o microfone apenas enquanto você afina. O áudio não é gravado nem enviado."
+        }
+      ]
     ]
   }
 }

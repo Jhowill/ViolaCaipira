@@ -1,4 +1,4 @@
-# Viola Caipira
+# Cifras de Viola
 
 Aplicativo offline de apoio ao estudo da viola caipira, construído com Expo, React Native, TypeScript, Expo Router e SQLite.
 

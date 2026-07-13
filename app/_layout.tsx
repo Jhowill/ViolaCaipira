@@ -3,6 +3,8 @@ import { ToastProvider } from "@/state/toast";
 import { AppBootstrapProvider } from "@/state/appBootstrap";
 import { AppBootstrapGate } from "@/components/system/AppBootstrapGate";
 import { AppErrorBoundary } from "@/components/system/AppErrorBoundary";
+import { OnboardingGate } from "@/components/system/OnboardingGate";
+import { OnboardingProvider } from "@/state/onboarding";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,7 +18,11 @@ function Providers({ children }: { readonly children: ReactNode }) {
           <AppErrorBoundary>
             <AppBootstrapProvider>
               <AppBootstrapGate>
-                <ToastProvider>{children}</ToastProvider>
+                <OnboardingProvider>
+                  <OnboardingGate>
+                    <ToastProvider>{children}</ToastProvider>
+                  </OnboardingGate>
+                </OnboardingProvider>
               </AppBootstrapGate>
             </AppBootstrapProvider>
           </AppErrorBoundary>
@@ -35,6 +41,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="error/recovery" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ headerShown: false }} />
       </Stack>

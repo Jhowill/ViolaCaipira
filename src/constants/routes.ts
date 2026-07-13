@@ -6,6 +6,13 @@ export const APP_ROUTE_GROUPS = {
 } as const;
 
 export const APP_ROUTES = {
+  onboardingWelcome: "/onboarding" as const,
+  onboardingExperience: "/onboarding/experience" as const,
+  onboardingTuning: "/onboarding/tuning" as const,
+  onboardingDiagram: "/onboarding/diagram" as const,
+  onboardingHandedness: "/onboarding/handedness" as const,
+  onboardingMicrophone: "/onboarding/microphone" as const,
+  onboardingSummary: "/onboarding/summary" as const,
   home: "/" as const,
   songs: "/songs" as const,
   chords: "/chords" as const,

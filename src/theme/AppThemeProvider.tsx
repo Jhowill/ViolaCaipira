@@ -14,7 +14,7 @@ export interface AppThemeProviderProps extends PropsWithChildren {
 
 export function AppThemeProvider({
   children,
-  initialMode = 'system',
+  initialMode = 'light',
 }: AppThemeProviderProps) {
   const systemColorScheme = useColorScheme();
   const [mode, setMode] = useState<ThemeMode>(initialMode);
