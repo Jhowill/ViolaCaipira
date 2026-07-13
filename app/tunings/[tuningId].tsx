@@ -1,63 +1,116 @@
+import { TuningCourseRow } from "@/components/tuning/TuningCourseRow";
+import { AppButton, AppCard, AppHeader, EmptyState, ErrorState, LoadingState, ScreenContainer, SectionHeader } from "@/components/ui";
 import { APP_ROUTES } from "@/constants/routes";
-import { RoutePlaceholder } from "@/components/navigation/RoutePlaceholder";
-import { AppButton, AppCard, Chip } from "@/components/ui";
 import { useSafeNavigation } from "@/hooks/useSafeNavigation";
+import { useTuning } from "@/hooks/useTuning";
+import type { ContentOrigin } from "@/types/music";
 import { humanizeSlug } from "@/utils/formatters";
 import { useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+
+function resolveOrigin(value: string | undefined): ContentOrigin | "all" {
+  if (value === "catalog" || value === "user") {
+    return value;
+  }
+  return "all";
+}
 
 export default function TuningDetailScreen() {
   const navigation = useSafeNavigation();
-  const params = useLocalSearchParams<{ tuningId?: string }>();
-  const tuningName = humanizeSlug(params.tuningId, "Afinação");
+  const params = useLocalSearchParams<{ tuningId?: string; origin?: string }>();
+  const tuningState = useTuning({
+    tuningId: params.tuningId ?? "missing",
+    origin: resolveOrigin(params.origin),
+  });
+  const [activating, setActivating] = useState(false);
 
+  const activate = async () => {
+    setActivating(true);
+    try {
+      await tuningState.activate();
+      navigation.goHome();
+    } catch {
+      // O hook troca para o estado de erro e mantém a preferência anterior.
+    } finally {
+      setActivating(false);
+    }
+  };
+
+  if (tuningState.status === "loading") {
+    return <ScreenContainer variant="centered"><LoadingState title="Carregando afinação" /></ScreenContainer>;
+  }
+
+  if (tuningState.status === "error") {
+    return (
+      <ScreenContainer variant="centered">
+        <ErrorState
+          title="Não foi possível abrir a afinação"
+          description="A preferência ativa não foi alterada."
+          details={tuningState.error?.message}
+          onActionPress={() => void tuningState.refresh()}
+          secondaryActionLabel="Voltar às afinações"
+          onSecondaryActionPress={() => navigation.safeBack(APP_ROUTES.tunings)}
+        />
+      </ScreenContainer>
+    );
+  }
+
+  if (!tuningState.tuning) {
+    return (
+      <ScreenContainer variant="centered">
+        <EmptyState
+          title="Afinação não encontrada"
+          description="Ela pode não estar instalada no catálogo local."
+          actionLabel="Voltar às afinações"
+          onActionPress={() => navigation.safeBack(APP_ROUTES.tunings)}
+        />
+      </ScreenContainer>
+    );
+  }
+
+  const tuning = tuningState.tuning;
   return (
-    <RoutePlaceholder
-      eyebrow="Detalhe da afinação"
-      title={tuningName}
-      subtitle="Notas, ordem das cordas e aviso de tensão"
-      heroTitle={`${tuningName} em foco`}
-      heroDescription="Aqui entra a visão detalhada da afinação com a numeração das cinco ordens e a descrição dos pares."
-      heroVariant="music"
-      activeTuningValue={tuningName}
-      activeTuningDetail="Conteúdo base para a próxima etapa"
-      primaryActionLabel="Ativar esta afinação"
-      onPrimaryActionPress={() => navigation.goHome()}
-      secondaryActionLabel="Abrir afinador guiado"
-      onSecondaryActionPress={() => navigation.push(APP_ROUTES.tunerGuided)}
-    >
+    <ScreenContainer scroll maxWidth={640}>
+      <AppHeader
+        title={tuning.name}
+        subtitle={`${humanizeSlug(tuning.verificationStatus, tuning.verificationStatus)} • ${tuning.courses.length} ordens`}
+        onBackPress={() => navigation.safeBack(APP_ROUTES.tunings)}
+      />
+
       <AppCard
         variant="informative"
-        title="Notas abertas"
-        subtitle="Visual simplificado"
-        description="D A F# A D • representação resumida para o shell inicial."
-      >
-        <View style={styles.chipRow}>
-          {["1ª", "2ª", "3ª", "4ª", "5ª"].map((order) => (
-            <Chip key={order} label={order} variant="tag" selected={order === "1ª"} />
-          ))}
-        </View>
-      </AppCard>
-
-      <AppCard
-        variant="alert"
-        title="Tensão e encordoamento"
-        description="Se a afinação exigir subida relevante de tensão, o app precisa avisar antes da confirmação."
-        footer={
-          <AppButton fullWidth onPress={() => navigation.push(APP_ROUTES.tuner)} variant="secondary">
-            Ler alerta de segurança
-          </AppButton>
-        }
+        title={tuning.shortName}
+        description={tuning.description ?? "Afinação registrada no banco local."}
       />
-    </RoutePlaceholder>
+
+      <View style={styles.actions}>
+        <AppButton fullWidth loading={activating} onPress={() => void activate()}>
+          Ativar esta afinação
+        </AppButton>
+        <AppButton fullWidth variant="secondary" onPress={() => navigation.push(APP_ROUTES.tunerGuided)}>
+          Abrir afinador guiado
+        </AppButton>
+      </View>
+
+      <SectionHeader title="Cordas abertas" description="Cinco ordens e dez cordas registradas para esta afinação." />
+      <View style={styles.courses}>
+        {tuning.courses.map((course) => (
+          <TuningCourseRow
+            key={course.id}
+            courseNumber={course.courseNumber}
+            strings={course.strings}
+            pairType={course.pairType}
+            variant="readOnly"
+          />
+        ))}
+      </View>
+
+      {tuning.tensionWarning ? (
+        <AppCard variant="alert" title="Tensão e encordoamento" description={tuning.tensionWarning} />
+      ) : null}
+    </ScreenContainer>
   );
 }
 
-const styles = StyleSheet.create({
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-});
+const styles = StyleSheet.create({ actions: { gap: 10 }, courses: { gap: 10 } });

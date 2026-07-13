@@ -1,54 +1,104 @@
+import { RoutePlaceholder } from "@/components/navigation/RoutePlaceholder";
+import {
+  AppButton,
+  AppCard,
+  Chip,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  SearchField,
+  SectionHeader,
+} from "@/components/ui";
 import { APP_ROUTES } from "@/constants/routes";
 import { useSafeNavigation } from "@/hooks/useSafeNavigation";
+import { useTunings } from "@/hooks/useTunings";
 import { humanizeSlug } from "@/utils/formatters";
-import { RoutePlaceholder } from "@/components/navigation/RoutePlaceholder";
-import { AppButton, AppCard, SectionHeader } from "@/components/ui";
 import { StyleSheet, View } from "react-native";
-
-const tunings = [
-  { id: "cebolao-em-re", title: "Cebolão em Ré", subtitle: "Acorde base equilibrado", tone: "D", status: "verified" },
-  { id: "cebolao-em-mi", title: "Cebolão em Mi", subtitle: "Mais brilhante e aberta", tone: "E", status: "calculated" },
-  { id: "rio-abaixo", title: "Rio Abaixo", subtitle: "Clássica para repertório raiz", tone: "A", status: "verified" },
-  { id: "boiadeira", title: "Boiadeira", subtitle: "Leitura confortável e firme", tone: "G", status: "user_created" },
-] as const;
 
 export default function TuningsScreen() {
   const navigation = useSafeNavigation();
+  const tuningsState = useTunings();
+  const active = tuningsState.tunings.find((tuning) => tuning.isActive) ?? null;
+  const featured = active ?? tuningsState.tunings[0] ?? null;
 
   return (
     <RoutePlaceholder
       eyebrow="Afinações"
       title="Escolha a base da viola"
-      subtitle="A afinação muda os acordes, o afinador e o repertório sugerido."
-      heroTitle="Cebolão em Ré"
-      heroDescription="A afinação ativa aparece em todo o app para reduzir erro de contexto e tornar a navegação segura."
+      subtitle="A afinação muda acordes, afinador e repertório"
+      heroTitle={featured?.name ?? "Nenhuma afinação instalada"}
+      heroDescription={featured ? "Detalhes e origem vêm do banco local, sem conteúdo demonstrativo misturado ao catálogo." : "Instale ou crie uma afinação validada para ativar acordes e o afinador guiado."}
       heroVariant="music"
-      heroTag="Mais usada"
-      activeTuningValue="Cebolão em Ré"
-      activeTuningDetail="Revisada e pronta para estudo"
-      primaryActionLabel="Abrir afinador"
-      onPrimaryActionPress={() => navigation.push(APP_ROUTES.tunerGuided)}
-      secondaryActionLabel="Ver dicas de segurança"
+      heroTag={featured?.isActive ? "Ativa" : featured ? "Disponível" : "Catálogo vazio"}
+      activeTuningValue={active?.name ?? "Não definida"}
+      activeTuningDetail={active ? "Preferência salva localmente" : "Escolha necessária para recursos musicais"}
+      primaryActionLabel={featured ? "Ver detalhes" : "Abrir afinador cromático"}
+      onPrimaryActionPress={() =>
+        featured
+          ? navigation.push({
+              pathname: "/tunings/[tuningId]",
+              params: { tuningId: featured.ref.id, origin: featured.ref.origin },
+            })
+          : navigation.push(APP_ROUTES.tunerChromatic)
+      }
+      secondaryActionLabel="Abrir afinador"
       onSecondaryActionPress={() => navigation.push(APP_ROUTES.tuner)}
     >
-      <SectionHeader
-        title="Afinações iniciais"
-        description="Esta lista já respeita o que as referências do app pedem para a V1."
+      <SearchField
+        value={tuningsState.query}
+        onChangeText={tuningsState.setQuery}
+        placeholder="Buscar afinações"
       />
 
-      <View style={styles.list}>
-        {tunings.map((tuning) => (
-          <AppCard
-            key={tuning.id}
-            variant="interactive"
-            padding="lg"
-            title={tuning.title}
-            subtitle={tuning.subtitle}
-            description={`Tônica base ${tuning.tone} • status ${humanizeSlug(tuning.status, tuning.status)}`}
-            onPress={() => navigation.push(APP_ROUTES.tuningDetail(tuning.id))}
-          />
-        ))}
-      </View>
+      <SectionHeader
+        title="Afinações locais"
+        description={tuningsState.tunings.length === 1 ? "1 afinação no banco local." : `${tuningsState.tunings.length} afinações no banco local.`}
+      />
+
+      {tuningsState.status === "loading" ? (
+        <LoadingState variant="list" rows={3} title="Carregando afinações" />
+      ) : tuningsState.status === "error" ? (
+        <ErrorState
+          title="Não foi possível carregar as afinações"
+          description="A preferência atual não foi alterada."
+          details={tuningsState.error?.message}
+          onActionPress={() => void tuningsState.refresh()}
+        />
+      ) : tuningsState.tunings.length === 0 ? (
+        <EmptyState
+          title={tuningsState.query ? "Nenhuma afinação encontrada" : "Catálogo de afinações vazio"}
+          description={tuningsState.query ? "Revise o nome pesquisado." : "O app aguarda conteúdo musical validado e não usa afinações fictícias como dado definitivo."}
+          actionLabel="Abrir afinador cromático"
+          onActionPress={() => navigation.push(APP_ROUTES.tunerChromatic)}
+        />
+      ) : (
+        <View style={styles.list}>
+          {tuningsState.tunings.map((tuning) => (
+            <AppCard
+              key={`${tuning.ref.origin}-${tuning.ref.id}`}
+              variant={tuning.isActive ? "selected" : "interactive"}
+              padding="lg"
+              title={tuning.name}
+              subtitle={tuning.openChordLabel ? `Acorde aberto ${tuning.openChordLabel}` : tuning.shortName}
+              description={tuning.courseLabels.length > 0 ? tuning.courseLabels.join(" • ") : "Detalhes disponíveis na ficha da afinação"}
+              selected={tuning.isActive}
+              onPress={() =>
+                navigation.push({
+                  pathname: "/tunings/[tuningId]",
+                  params: { tuningId: tuning.ref.id, origin: tuning.ref.origin },
+                })
+              }
+              footer={
+                <View style={styles.cardFooter}>
+                  <Chip label={humanizeSlug(tuning.verificationStatus, tuning.verificationStatus)} variant="status" />
+                  <Chip label={tuning.ref.origin === "user" ? "Pessoal" : "Catálogo"} variant="tag" />
+                  {tuning.isActive ? <Chip label="Ativa" selected variant="selection" /> : null}
+                </View>
+              }
+            />
+          ))}
+        </View>
+      )}
 
       <AppButton fullWidth onPress={() => navigation.push(APP_ROUTES.tuner)} variant="secondary">
         Revisar tensão antes de trocar
@@ -58,7 +108,6 @@ export default function TuningsScreen() {
 }
 
 const styles = StyleSheet.create({
-  list: {
-    gap: 12,
-  },
+  list: { gap: 12 },
+  cardFooter: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

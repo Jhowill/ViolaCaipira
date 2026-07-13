@@ -92,7 +92,7 @@ function deriveAlternatives(
 
 export function useChords(options: {
   readonly repository?: ChordRepository;
-  readonly tuning: EntityRef<"tuning">;
+  readonly tuning: EntityRef<"tuning"> | null;
   readonly accidentalPreference?: AccidentalPreference;
   readonly initialQuery?: string;
   readonly initialFilters?: ChordShapeFilters;
@@ -107,6 +107,12 @@ export function useChords(options: {
   const refresh = useCallback(async (): Promise<readonly ChordShapeView[]> => {
     try {
       setState(createLoadingState<ChordsStateData>());
+
+      if (!options.tuning) {
+        setState(createReadyState<ChordsStateData>({ chord: null, shapes: [] }));
+        return [];
+      }
+
       const repository = await resolveChordRepository(repositoryRef.current);
       const chord = query.trim().length > 0 ? await repository.resolveChord(query) : null;
 

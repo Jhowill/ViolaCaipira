@@ -21,6 +21,8 @@ interface ChordShapeStateData {
   readonly alternatives: readonly ChordShapeView[];
 }
 
+const EMPTY_CHORD_SHAPE_FILTERS: ChordShapeFilters = Object.freeze({});
+
 function applyAccidentalPreference(shape: ChordShapeView, accidentalPreference: AccidentalPreference): ChordShapeView {
   if (accidentalPreference === "contextual") {
     return shape;
@@ -97,7 +99,7 @@ export function useChordShape(options: {
   const accidentalPreference = options.accidentalPreference ?? "contextual";
   const shapeId = options.shapeId;
   const origin = options.origin ?? "all";
-  const filters = options.filters ?? {};
+  const filters = options.filters ?? EMPTY_CHORD_SHAPE_FILTERS;
 
   const refresh = useCallback(async (): Promise<ChordShapeView | null> => {
     try {

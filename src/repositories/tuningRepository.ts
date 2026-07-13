@@ -414,8 +414,18 @@ async function loadTuningIndex(
   preferencesRepository: PreferencesRepository,
   options: TuningListOptions = {},
 ): Promise<readonly (TuningSummary & TuningGraphBase)[]> {
-  const preferences = await preferencesRepository.get();
-  const activeRef = createTuningRef(preferences.app.activeTuningOrigin, preferences.app.activeTuningId);
+  let activeRef: EntityRef<"tuning"> | null = null;
+  try {
+    const preferences = await preferencesRepository.get();
+    activeRef = createTuningRef(preferences.app.activeTuningOrigin, preferences.app.activeTuningId);
+  } catch (error) {
+    if (
+      !(error instanceof RepositoryError) ||
+      (error.code !== "TUNING_NOT_FOUND" && error.code !== "PREFERENCES_NOT_FOUND")
+    ) {
+      throw error;
+    }
+  }
 
   const catalogRows = options.origin !== "user"
     ? await database.getAllAsync<CatalogTuningRow>(SELECT_CATALOG_TUNINGS_SQL)

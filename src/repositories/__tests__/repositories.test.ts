@@ -83,6 +83,29 @@ describe("preferences repository", () => {
 });
 
 describe("tuning repository", () => {
+  it("permite listar um catálogo vazio antes de existirem preferências", async () => {
+    const database = createRepositoryFakeDatabase({
+      catalogTunings: [],
+      catalogTuningAliases: [],
+      catalogTuningCourses: [],
+      catalogTuningStrings: [],
+      userTunings: [],
+      userTuningCourses: [],
+      userTuningStrings: [],
+    });
+    const unavailablePreferences = {
+      get: () => Promise.reject(new RepositoryError("TUNING_NOT_FOUND", "No tuning is available.")),
+      save: () => Promise.reject(new Error("not used")),
+      restore: () => Promise.reject(new Error("not used")),
+      setActiveTuning: () => Promise.reject(new Error("not used")),
+    };
+    const repository = createTuningRepository(database, {
+      preferencesRepository: unavailablePreferences,
+    });
+
+    await expect(repository.list()).resolves.toEqual([]);
+  });
+
   it("lista e busca afinações com marcadores de ativo e favorito", async () => {
     const database = createRepositoryFakeDatabase();
     const preferencesRepository = createPreferencesRepository(database, { now });
