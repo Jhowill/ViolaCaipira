@@ -83,7 +83,7 @@ export function BootstrapScreen({ phase }: BootstrapScreenProps) {
               style={[
                 theme.typography.displayLarge,
                 styles.title,
-                { color: theme.colors.onPrimary },
+                { color: brandColors.straw[200] },
               ]}
             >
               Cifras de Viola
@@ -140,7 +140,11 @@ const styles = StyleSheet.create({
   },
   ringLayer: {
     pointerEvents: "none",
-    ...StyleSheet.absoluteFill,
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     alignItems: "center",
     justifyContent: "center",
   },

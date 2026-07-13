@@ -95,7 +95,7 @@ export function BottomTabBar() {
         ]}
       >
         {MAIN_TABS.map((item) => (
-          <TabTrigger key={item.name} name={item.name} asChild resetOnFocus>
+          <TabTrigger key={item.name} name={item.name} asChild reset="onFocus">
             <BottomTabButton
               accessibilityLabel={item.accessibilityLabel}
               icon={item.icon}

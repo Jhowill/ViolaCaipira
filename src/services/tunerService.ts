@@ -25,7 +25,7 @@ function createIdleSignal(): TunerSignalState {
 
 function createUnknownPermissionResolver(): TunerPermissionResolver {
   return {
-    requestPermission: () => Promise.resolve("granted"),
+    requestPermission: () => Promise.resolve("blocked"),
   };
 }
 

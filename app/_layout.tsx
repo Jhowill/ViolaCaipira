@@ -8,10 +8,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import type { ReactNode } from "react";
 
-export const unstable_settings = {
-  initialRouteName: "(tabs)",
-};
-
 function Providers({ children }: { readonly children: ReactNode }) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

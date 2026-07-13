@@ -112,6 +112,20 @@ function TunerProbe({ service }: { readonly service: TunerService }) {
 }
 
 describe("tuner service", () => {
+  it("bloqueia a captura quando nenhuma integracao nativa de permissao foi fornecida", async () => {
+    const source = createSyntheticSource();
+    const service = createTunerService({ source: source.source });
+
+    await service.start();
+
+    expect(source.calls.start).toBe(0);
+    expect(source.calls.subscribe).toBe(0);
+    expect(service.getState()).toMatchObject({
+      status: "error",
+      permissionStatus: "blocked",
+    });
+  });
+
   it("exige start explícito, analisa sinal sintético e libera captura no stop", async () => {
     const source = createSyntheticSource();
     const permissionResolver = createPermissionResolver();
