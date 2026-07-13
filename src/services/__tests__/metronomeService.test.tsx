@@ -108,7 +108,7 @@ function readText(renderer: ReturnType<typeof TestRenderer.create>, testID: stri
   return "";
 }
 
-const asyncAct = act as unknown as (callback: () => void | Promise<void>) => Promise<void>;
+const asyncAct = act as unknown as (callback: () => unknown) => Promise<void>;
 
 function MetronomeProbe({ service }: { readonly service: MetronomeService }) {
   const metronome = useMetronome({ service });

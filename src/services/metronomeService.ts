@@ -452,10 +452,10 @@ export function createMetronomeService(options: MetronomeServiceOptions = {}): M
     };
 
     if (transportCursor !== null && (state.status === "counting_in" || state.status === "playing" || state.status === "paused")) {
-      return commit({
+      return Promise.resolve(commit({
         ...nextState,
         ...buildTransportState(nextState, transportCursor, state.status, state.status === "paused" ? null : transportCursor.nextBeatAtMs),
-      });
+      }));
     }
 
     return Promise.resolve(commit(nextState));
@@ -471,10 +471,10 @@ export function createMetronomeService(options: MetronomeServiceOptions = {}): M
     };
 
     if (transportCursor !== null && (state.status === "counting_in" || state.status === "playing" || state.status === "paused")) {
-      return commit({
+      return Promise.resolve(commit({
         ...nextState,
         ...buildTransportState(nextState, transportCursor, state.status, state.status === "paused" ? null : transportCursor.nextBeatAtMs),
-      });
+      }));
     }
 
     return Promise.resolve(commit(nextState));
@@ -490,10 +490,10 @@ export function createMetronomeService(options: MetronomeServiceOptions = {}): M
     };
 
     if (transportCursor !== null && (state.status === "counting_in" || state.status === "playing" || state.status === "paused")) {
-      return commit({
+      return Promise.resolve(commit({
         ...nextState,
         ...buildTransportState(nextState, transportCursor, state.status, state.status === "paused" ? null : transportCursor.nextBeatAtMs),
-      });
+      }));
     }
 
     return Promise.resolve(commit(nextState));
