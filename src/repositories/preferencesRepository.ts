@@ -560,9 +560,9 @@ export function createPreferencesRepository(
   const now = createNowProvider(options.now);
 
   async function getPreferences(): Promise<UserPreferences> {
-    return withDatabaseTransaction(database, async (transactionalDatabase) => {
-      return readPreferencesSnapshot(transactionalDatabase, now());
-    });
+    // A read does not need a transaction. On web SQLite can surface a rollback
+    // error when a read-only transaction fails before BEGIN is active.
+    return readPreferencesSnapshot(database, now());
   }
 
   async function savePreferences(preferences: UserPreferences): Promise<UserPreferences> {

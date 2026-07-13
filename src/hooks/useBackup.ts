@@ -1,123 +1,71 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-
 import { getAppDatabaseClient } from "@/database/client";
-import { createErrorState, createLoadingState, createReadyState, normalizeError } from "@/repositories/contracts";
 import { createBackupService } from "@/services/backupService";
-import type { BackupArtifact, BackupImportOptions, BackupImportResult, BackupService } from "@/types/backup";
+import type { BackupArtifact, BackupImportMode, BackupImportResult } from "@/types/backup";
+import { Platform, Share } from "react-native";
+import { useCallback, useRef, useState } from "react";
 
-export interface UseBackupResult {
-  readonly status: "loading" | "ready" | "error";
-  readonly backup: BackupArtifact | null;
+interface BackupState {
+  readonly artifact: BackupArtifact | null;
+  readonly result: BackupImportResult | null;
+  readonly busy: boolean;
   readonly error: Error | null;
-  readonly refresh: () => Promise<BackupArtifact>;
-  readonly exportBackup: () => Promise<BackupArtifact>;
-  readonly importBackup: (artifact: BackupArtifact, options?: BackupImportOptions) => Promise<BackupImportResult>;
 }
 
-interface BackupStateData {
-  readonly backup: BackupArtifact | null;
-}
+let servicePromise: Promise<ReturnType<typeof createBackupService>> | null = null;
 
-let defaultBackupServicePromise: Promise<BackupService> | null = null;
-
-async function getDefaultBackupService(): Promise<BackupService> {
-  if (!defaultBackupServicePromise) {
-    defaultBackupServicePromise = (async () => {
-      const client = await getAppDatabaseClient();
-      return createBackupService(client.database, {
-        appVersion: "0.1.0",
-      });
-    })().catch((error: unknown) => {
-      defaultBackupServicePromise = null;
-      throw error;
-    });
+async function getService() {
+  if (!servicePromise) {
+    servicePromise = getAppDatabaseClient().then((client) => createBackupService(client.database, {
+      appVersion: "0.1.0",
+      devicePlatform: Platform.OS === "android" || Platform.OS === "ios" ? Platform.OS : "unknown",
+    }));
   }
-
-  return defaultBackupServicePromise;
+  return servicePromise;
 }
 
-export async function resolveBackupService(service?: BackupService): Promise<BackupService> {
-  if (service) {
-    return service;
-  }
+export function useBackup() {
+  const stateRef = useRef<BackupState>({ artifact: null, result: null, busy: false, error: null });
+  const [state, setState] = useState(stateRef.current);
+  const commit = useCallback((next: BackupState) => { stateRef.current = next; setState(next); }, []);
 
-  return getDefaultBackupService();
-}
-
-export function useBackup(options: {
-  readonly service?: BackupService;
-} = {}): UseBackupResult {
-  const serviceRef = useRef<BackupService | undefined>(options.service);
-  serviceRef.current = options.service;
-  const [state, setState] = useState(createLoadingState<BackupStateData>());
-  const backupRef = useRef<BackupArtifact | null>(null);
-
-  const replaceBackup = useCallback((backup: BackupArtifact | null): void => {
-    backupRef.current = backup;
-    setState(
-      createReadyState<BackupStateData>({
-        backup,
-      }),
-    );
-  }, []);
-
-  const refresh = useCallback(async (): Promise<BackupArtifact> => {
+  const exportBackup = useCallback(async () => {
+    commit({ ...stateRef.current, busy: true, error: null });
     try {
-      setState(createLoadingState<BackupStateData>());
-      const service = await resolveBackupService(serviceRef.current);
-      const next = await service.exportBackup();
-      replaceBackup(next);
-      return next;
+      const artifact = await (await getService()).exportBackup();
+      commit({ artifact, result: null, busy: false, error: null });
+      try {
+        await Share.share({ title: "Backup Cifras de Viola", message: JSON.stringify({ manifest: artifact.manifest, payload: artifact.payload }) });
+      } catch {
+        // A prévia continua disponível mesmo quando o sistema não possui compartilhamento.
+      }
+      return artifact;
     } catch (error) {
-      const normalized = normalizeError(error);
-      setState(createErrorState<BackupStateData>(normalized));
+      const normalized = error instanceof Error ? error : new Error("Não foi possível exportar o backup.");
+      commit({ ...stateRef.current, busy: false, error: normalized });
       throw normalized;
     }
-  }, [replaceBackup]);
+  }, [commit]);
 
-  const exportBackup = useCallback(async (): Promise<BackupArtifact> => {
-    return refresh();
-  }, [refresh]);
-
-  const importBackup = useCallback(async (
-    artifact: BackupArtifact,
-    options?: BackupImportOptions,
-  ): Promise<BackupImportResult> => {
+  const importBackup = useCallback(async (serialized: string, mode: BackupImportMode = "replace") => {
+    commit({ ...stateRef.current, busy: true, error: null });
     try {
-      const service = await resolveBackupService(serviceRef.current);
-      const result = await service.importBackup(artifact, options);
-      await refresh();
+      const parsed = JSON.parse(serialized) as { manifest: BackupArtifact["manifest"]; payload: BackupArtifact["payload"] };
+      const artifact: BackupArtifact = {
+        manifest: parsed.manifest,
+        payload: parsed.payload,
+        manifestJson: JSON.stringify(parsed.manifest),
+        payloadJson: JSON.stringify(parsed.payload),
+        byteLength: new TextEncoder().encode(JSON.stringify(parsed.manifest)).byteLength + new TextEncoder().encode(JSON.stringify(parsed.payload)).byteLength,
+      };
+      const result = await (await getService()).importBackup(artifact, { mode });
+      commit({ artifact, result, busy: false, error: null });
       return result;
     } catch (error) {
-      const normalized = normalizeError(error);
-      setState(createErrorState<BackupStateData>(normalized));
+      const normalized = error instanceof Error ? error : new Error("Não foi possível importar o backup.");
+      commit({ ...stateRef.current, busy: false, error: normalized });
       throw normalized;
     }
-  }, [refresh]);
+  }, [commit]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    void refresh().catch((error) => {
-      if (cancelled) {
-        return;
-      }
-
-      const normalized = normalizeError(error);
-      setState(createErrorState<BackupStateData>(normalized));
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [refresh]);
-
-  return {
-    status: state.status,
-    backup: backupRef.current,
-    error: state.error,
-    refresh,
-    exportBackup,
-    importBackup,
-  };
+  return { ...state, exportBackup, importBackup, clearError: () => commit({ ...stateRef.current, error: null }) };
 }
